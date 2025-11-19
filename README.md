@@ -32,7 +32,7 @@ We need to implement 5 refactorings. The easiest ones to do maybe are:
 
 - [ ] Method extraction
 - [ ] Method inlining
-- [x] Renaming of variables :white-check-mark
+- [x] Renaming of variables
 - [ ] Encapsulate Atribute (from public to private get and set)
 
 Another option is to also implement indentification of code smells
