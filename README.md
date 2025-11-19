@@ -15,13 +15,13 @@ Alternatively, you can do all in one command:
 # Testing
 
 You can open a file to test it on the go. To test RenameVar refactoring, do the following:
-- Run `nvim -c "set rtp+=. | lua require('refact-plug')" test.cpp`
+- Run `nvim -c "set rtp+=. | lua require('refact-plug').setup()" test.cpp`
 - Now nvim should be opened (with no error warnings), with a cpp file
 - Run the nvim command `:RenameVar x y`, and see the renaming happening.
 
 # How to implement a new refactoring
 
-We write the relevant code on ```./lua/refact-plug/init.lua```. Follow the example of the Rename Variable refactoring. To create a new refactoring, two steps are needed.
+Write relevant code on ```./lua/refact-plug/init.lua```. Follow the example of the Rename Variable refactoring. To create a new refactoring, two steps are needed.
 
 1) Create a lua function implementing it (ex: M.rename_variable)
 2) Create a vim command so that the user can call the function (in M.setup)
@@ -53,6 +53,7 @@ In the specification, we said that we would implement 5 refactorings. The easier
 
 Another option is to also implement indentification and warning of code smells
 
+- [x] large lines
 - [ ] cod duplicado
 - [ ] metodos longos
 - [ ] classes grandes

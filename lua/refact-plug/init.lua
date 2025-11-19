@@ -30,7 +30,7 @@ function M.detect_smells()
 	vim.diagnostic.set(ns, 0, diagnostics)
 end
 
--- Renames source variable to target
+-- Renames all instances of {source} to {target}
 function M.rename_variable(opts)
 	-- Parsing input
 	local source = opts.fargs[1]
