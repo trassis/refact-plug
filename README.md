@@ -2,7 +2,7 @@ To run the plugin, do
 
 ```nvim -c "set rtp+=.```
 
-(if this does not work, try `nvim -c "set rtp+=.`)
+(if this does not work, try `nvim -c "set rtp+=/.`)
 
 and on nvim, run
 
