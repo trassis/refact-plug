@@ -1,24 +1,8 @@
 local M = {}
 
--- [[
--- Method extraction
--- Method inlining
--- Renaming of variables
--- Encapsulate Atribute (from public to private get and set)
---
--- Tambem indentificar alguns code smells?
--- cod duplicado
--- metodos longos
--- classes grandes
--- metodos com mts parametros
--- ]]
---
--- Ajuda:
---
--- treesitter
--- https://github.com/nvim-treesitter/nvim-treesitter?tab=readme-ov-file#quickstart
---
---
+function M.hello()
+	print("Hi from the plugin!")
+end
 
 -- Renames source variable to target
 function M.rename_variable(opts)
