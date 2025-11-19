@@ -1,7 +1,12 @@
 int main(){
 	int nomecomx = 0;
-	int y = 10;
-	y += 1;
-	int z = y + 2;
+	int x = 10;
+	x += 1;
+	int z = x + 2;
 	return 0;
+
+	// Long line: should give a code smell
+	// asldkfjasldkjflaksdjfklasjdflkasjdfklajsdfklajsdflkajsdfkljasdlfjasdklasldkfjasdkfj
+	// small line
+	// asldkfjas
 }

@@ -1,7 +1,33 @@
 local M = {}
 
+-- HACK: apagar isso aqui dps
 function M.hello()
 	print("Hi from the plugin!")
+end
+
+local ns = vim.api.nvim_create_namespace("RefactorPlugin")
+
+function M.detect_smells()
+	local diagnostics = {}
+
+	-- Long lines smell
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+	for i, line in ipairs(lines) do
+		if #line > 80 then
+			table.insert(diagnostics, {
+				lnum = i - 1,
+				col = 80,
+				end_lnum = i - 1,
+				end_col = #line,
+				severity = vim.diagnostic.severity.WARN,
+				message = "Code Smell: Line exceeds 80 characters",
+				source = "RefactorPlug",
+			})
+		end
+	end
+
+	-- Publish the diagnostics to the buffer
+	vim.diagnostic.set(ns, 0, diagnostics)
 end
 
 -- Renames source variable to target
@@ -39,11 +65,17 @@ function M.rename_variable(opts)
 end
 
 function M.setup()
+	-- TODO: Assert lang is cpp?
+
 	vim.api.nvim_create_user_command("RenameVar", M.rename_variable, {
 		nargs = "+",
 		desc = "Renames <source> variable to <target>.",
 	})
-	-- Assert lang is cpp?
+
+	vim.api.nvim_create_autocmd({ "TextChanged", "BufWritePost" }, {
+		callback = M.detect_smells,
+	})
+	M.detect_smells()
 end
 
 return M
