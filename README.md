@@ -26,6 +26,8 @@ Write relevant code on ```./lua/refact-plug/init.lua```. Follow the example of t
 1) Create a lua function implementing it (ex: M.rename_variable)
 2) Create a vim command so that the user can call the function (in M.setup)
 
+I have created a new file for refactorings, `./lua/refact-plug/refactorings.lua`. Implement refactorings there, and after create a new user command in `init.lua.setup()`.
+
 The main sources of help will be
 - nvim help docs. For example: `:help treesitter.get_parser()`
 - there are some ytb videos on how to write a lua plugin
@@ -33,7 +35,9 @@ The main sources of help will be
 
 # Troubleshooting:
 
-after entering vim with set rtp, check if the `.` folder appears on 
+If the plugin does not seem to work... 
+
+After entering vim with set rtp, check if the `.` folder appears on 
 
 ```:echo &rtp```
 
@@ -45,7 +49,7 @@ If it dosent, try changing the command from `.` to `./`:
 
 In the specification, we said that we would implement 5 refactorings. The easier ones seems to be:
 
-- [ ] Method extraction
+- [x] Method extraction
 - [ ] Method inlining
 - [x] Renaming of variables
 - [ ] Encapsulate Atribute (from public to private get and set)
@@ -58,6 +62,10 @@ Another option is to also implement indentification and warning of code smells
 - [ ] metodos longos
 - [ ] classes grandes
 - [ ] metodos com mts parametros
+
+Notes
+
+- Method extraction can be made better. We can identify declarations that become invalid after extraction, and insert them as parameters.
 
 ---
 
