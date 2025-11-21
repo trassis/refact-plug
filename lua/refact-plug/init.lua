@@ -64,6 +64,35 @@ function M.rename_variable(opts)
 	end
 end
 
+-- TODO: AQUI
+function M.inline_method(opts)
+	local insert_range = opts.fargs[1]
+	local method_name = opts.fargs[2]
+	if not insert_range or not method_name then
+		print("????") -- TODO:
+		return
+	end
+
+	local tree = vim.treesitter.get_parser():parse()[1]
+
+	local query_string = string.format("", method_name)
+	local query = vim.treesitter.query.parse("cpp", query_string)
+
+	local changes = {}
+	for id, node, metadata in query:iter_captures(tree:root(), 0, 0, -1) do
+		local start_row, start_col, end_row, end_col = node:range()
+		local method_text = vim.api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {})
+		table.insert(changes, method_text)
+	end
+
+	if #changes ~= 1 then
+		print("DEBUG TODO")
+	end
+
+	local r = changes[1]
+	-- vim.api.nvim_buf_set_text(0, , { text })
+end
+
 function M.setup()
 	-- TODO: Assert lang is cpp?
 
@@ -71,6 +100,13 @@ function M.setup()
 		nargs = "+",
 		desc = "Renames <source> variable to <target>.",
 	})
+
+	-- TODO: AQUI
+	vim.api.nvim_create_user_command("InsertBelow", function(opts)
+		local target_line = opts.line2
+		local text_to_insert = { "Inserted Text" }
+		vim.api.nvim_buf_set_lines(0, target_line, target_line, false, text_to_insert)
+	end, { range = true })
 
 	vim.api.nvim_create_autocmd({ "TextChanged", "BufWritePost" }, {
 		callback = M.detect_smells,
