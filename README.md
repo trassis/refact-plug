@@ -66,6 +66,8 @@ Another option is to also implement indentification and warning of code smells
 Notes
 
 - Method extraction can be made better. We can identify declarations that become invalid after extraction, and insert them as parameters.
+- Delete hello function 
+- What are the dependencies of the plugin? cpp treesitter is one...
 
 ---
 

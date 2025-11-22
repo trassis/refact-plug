@@ -10,7 +10,7 @@ local ns = vim.api.nvim_create_namespace("RefactorPlugin")
 function M.detect_smells()
 	local diagnostics = {}
 
-	-- Long lines smell
+	-- Long lines code smell
 	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 	for i, line in ipairs(lines) do
 		if #line > 80 then
@@ -33,7 +33,7 @@ end
 local Refactorings = require("refact-plug.refactorings")
 
 function M.setup()
-	-- TODO: Assert lang is cpp?
+	-- TODO: If lang is not cpp, do not continue...
 
 	-- Creates user commands for each refactoring.
 	vim.api.nvim_create_user_command("RenameVar", Refactorings.rename_variable, {
@@ -46,10 +46,10 @@ function M.setup()
 		desc = "Extracts a selection into a new method name <method_name>.",
 	})
 
-	 vim.api.nvim_create_user_command("InlineMethod", Refactorings.inline_method, {
-	 	nargs = "+",
-	 	desc = "Inline ",
-	 })
+	vim.api.nvim_create_user_command("InlineMethod", Refactorings.inline_method, {
+		nargs = "+",
+		desc = "Inline ",
+	})
 
 	-- Detects code smells whenever the buffer is modified or saved.
 	vim.api.nvim_create_autocmd({ "TextChanged", "BufWritePost" }, {

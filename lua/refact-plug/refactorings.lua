@@ -57,6 +57,56 @@ local function get_insert_row(cursor_row)
 	return start_row
 end
 
+-- Get identifiers defined outside a selection {start_row...end_row}
+local function get_external_params(start_row, end_row)
+	local root = vim.treesitter.get_parser(0, "cpp"):parse()[1]:root()
+	local params = {}
+	local seen = {}
+
+	-- Query to find identifiers used in the selection
+	local usage_query = vim.treesitter.query.parse("cpp", "(identifier) @id")
+
+	-- Loop trough all identifiers in the selection
+	for _, node in usage_query:iter_captures(root, 0, start_row, end_row) do
+		local name = vim.treesitter.get_node_text(node, 0)
+		local parent = node:parent()
+
+		-- Ignore if already seen, or if its a function call/field access
+		if not seen[name] and parent:type() ~= "call_expression" and parent:type() ~= "field_expression" then
+			-- Check if is defined inside the selection
+			local is_local = false
+			local local_def_query = vim.treesitter.query.parse(
+				"cpp",
+				string.format('(declaration declarator: (_ declarator: (identifier) @name (#eq? @name "%s")))', name)
+			)
+			for _ in local_def_query:iter_captures(root, 0, start_row, end_row) do
+				is_local = true
+			end
+
+			if not is_local then
+				seen[name] = true
+				-- Search above the selection for the type definition
+				local type_val = "auto"
+				local type_query = vim.treesitter.query.parse(
+					"cpp",
+					string.format(
+						'(declaration type: (_) @type declarator: (_ declarator: (identifier) @name (#eq? @name "%s")))',
+						name
+					)
+				)
+				for id, t_node in type_query:iter_captures(root, 0, 0, start_row) do
+					if type_query.captures[id] == "type" then
+						type_val = vim.treesitter.get_node_text(t_node, 0)
+					end
+				end
+
+				table.insert(params, { type = type_val, name = name })
+			end
+		end
+	end
+	return params
+end
+
 -- Extracts a selection {opts.line1..opts.line2} to a new method named {opts.fargs[1]}.
 function R.extract_method(opts)
 	local method_name = opts.fargs[1]
@@ -77,26 +127,55 @@ function R.extract_method(opts)
 	end
 
 	-- Creates the new method.
+	-- local method_definition = {
+	-- 	string.format("void %s(){", method_name),
+	-- }
+	-- local lines = vim.api.nvim_buf_get_lines(0, start_row, end_row, false)
+	-- for _, line in ipairs(lines) do
+	-- 	-- table.insert(method_definition, "    " .. line)
+	-- 	table.insert(method_definition, line)
+	-- end
+	-- table.insert(method_definition, "}")
+	-- table.insert(method_definition, "")
+
+	-- Resolve parameters
+	local params_list = get_external_params(start_row, end_row)
+	local param_definitions = {}
+	local param_args = {}
+	for _, p in ipairs(params_list) do
+		table.insert(param_definitions, string.format("%s& %s", p.type, p.name))
+		table.insert(param_args, p.name)
+	end
+	local params_str = table.concat(param_definitions, ", ")
+	local args_str = table.concat(param_args, ", ")
+
+	-- Creates the new method with parameters.
 	local method_definition = {
-		string.format("void %s(){", method_name),
+		string.format("void %s(%s) {", method_name, params_str),
 	}
 	local lines = vim.api.nvim_buf_get_lines(0, start_row, end_row, false)
 	for _, line in ipairs(lines) do
-		table.insert(method_definition, "    " .. line)
+		table.insert(method_definition, line)
 	end
 	table.insert(method_definition, "}")
 	table.insert(method_definition, "")
 
 	-- Inserts a call to the extracted method.
-	local method_call = string.format("%s();", method_name)
+	local method_call = string.format("%s(%s);", method_name, args_str)
 	vim.api.nvim_buf_set_lines(0, start_row, end_row, false, { method_call })
 	vim.cmd(string.format("silent normal! %dG=%dG", start_row, end_row))
+
+	-- Inserts a call to the extracted method.
+	-- local method_call = string.format("%s();", method_name)
+	-- vim.api.nvim_buf_set_lines(0, start_row, end_row, false, { method_call })
+	-- vim.cmd(string.format("silent normal! %dG=%dG", start_row, end_row))
 
 	-- Inserts the extracted method on the buffer.
 	vim.api.nvim_buf_set_lines(0, insert_row, insert_row, false, method_definition)
 	vim.cmd(string.format("silent normal! %dG=%dG", insert_row + 1, insert_row + #method_definition))
 end
 
+-- Inlines a method
 function R.inline_method(opts)
 	local method_name = opts.fargs[1]
 
