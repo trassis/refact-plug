@@ -45,11 +45,11 @@ function M.setup()
 		range = true,
 		desc = "Extracts a selection into a new method name <method_name>.",
 	})
-	-- TODO: AQUI
-	-- vim.api.nvim_create_user_command("InlineMethod", Refactorings.inline_method, {
-	-- 	nargs = "+",
-	-- 	desc = "???",
-	-- })
+
+	 vim.api.nvim_create_user_command("InlineMethod", Refactorings.inline_method, {
+	 	nargs = "+",
+	 	desc = "Inline ",
+	 })
 
 	-- Detects code smells whenever the buffer is modified or saved.
 	vim.api.nvim_create_autocmd({ "TextChanged", "BufWritePost" }, {
