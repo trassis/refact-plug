@@ -50,7 +50,7 @@ If it dosent, try changing the command from `.` to `./`:
 In the specification, we said that we would implement 5 refactorings. The easier ones seems to be:
 
 - [x] Method extraction
-- [ ] Method inlining
+- [x] Method inlining
 - [x] Renaming of variables
 - [ ] Encapsulate Atribute (from public to private get and set)
 - [ ] ??? We need another one ???
