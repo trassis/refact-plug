@@ -89,3 +89,56 @@ Example (Renames all instances of identifier 'cnt' to 'counter')
 ```
     :RenameVar cnt counter
 ```
+### ExtractMethod
+
+```:'<,'>ExtractMethod {method_name}```
+
+Extracts the visually selected lines of code into a new `void` method named {method_name}.
+The selection is replaced by a function call, and the new method definition is inserted
+automatically (usually before the current function or at the end of the file).
+
+Arguments:
+```
+    {method_name}   The name of the new function to be created containing the selected code.
+```
+
+Example (Selects a 'for' loop and extracts it to a function named 'process_data')
+```
+    :'<,'>ExtractMethod process_data
+```
+
+### InlineMethod
+
+```:InlineMethod {method_name}```
+
+Replaces all occurrences of calls to {method_name} with the method's actual body logic.
+It performs argument substitution (mapping call arguments to function parameters) and
+deletes the original function definition after inlining.
+
+Arguments:
+```
+    {method_name}   The name of the existing function to be inlined.
+```
+
+Example (Inlines the 'helper_calc' function into all places it is called)
+```
+    :InlineMethod helper_calc
+```
+
+### EncapsulateField
+
+```:EncapsulateField```
+
+Encapsulates the C++ field (attribute) currently under the cursor. It generates standard
+public Getter and Setter methods and moves the field itself to the `private` section of the
+class/struct. If `public` or `private` sections do not exist, they are created automatically.
+
+Arguments:
+```
+    None            (This command acts on the line currently under the cursor).
+```
+
+Example (With cursor positioned on 'int age;', generates getAge/setAge and privatizes 'age')
+```
+    :EncapsulateField
+```
