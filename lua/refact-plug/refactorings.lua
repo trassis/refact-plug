@@ -138,7 +138,6 @@ function R.extract_method(opts)
 	-- table.insert(method_definition, "}")
 	-- table.insert(method_definition, "")
 
-	-- Resolve parameters
 	local params_list = get_external_params(start_row, end_row)
 	local param_definitions = {}
 	local param_args = {}
@@ -149,7 +148,6 @@ function R.extract_method(opts)
 	local params_str = table.concat(param_definitions, ", ")
 	local args_str = table.concat(param_args, ", ")
 
-	-- Creates the new method with parameters.
 	local method_definition = {
 		string.format("void %s(%s) {", method_name, params_str),
 	}
@@ -160,17 +158,11 @@ function R.extract_method(opts)
 	table.insert(method_definition, "}")
 	table.insert(method_definition, "")
 
-	-- Inserts a call to the extracted method.
 	local method_call = string.format("%s(%s);", method_name, args_str)
 	vim.api.nvim_buf_set_lines(0, start_row, end_row, false, { method_call })
 	vim.cmd(string.format("silent normal! %dG=%dG", start_row, end_row))
 
 	-- Inserts a call to the extracted method.
-	-- local method_call = string.format("%s();", method_name)
-	-- vim.api.nvim_buf_set_lines(0, start_row, end_row, false, { method_call })
-	-- vim.cmd(string.format("silent normal! %dG=%dG", start_row, end_row))
-
-	-- Inserts the extracted method on the buffer.
 	vim.api.nvim_buf_set_lines(0, insert_row, insert_row, false, method_definition)
 	vim.cmd(string.format("silent normal! %dG=%dG", insert_row + 1, insert_row + #method_definition))
 end
@@ -288,25 +280,18 @@ function R.inline_method(opts)
 		local end_insert = row_idx + #new_body_lines
 		vim.cmd(string.format("silent normal! %dG=%dG", row_idx + 1, end_insert))
 	end
-	-- 4. DELETAR A DEFINIÇÃO ORIGINAL
-	-- Busca de novo pois as linhas mudaram
+
 	vim.cmd("normal! gg")
 
-	-- CORREÇÃO AQUI:
-	-- Antes estava "().*{" (parênteses vazios).
-	-- Mudamos para "\\(.*" (parêntese aberto seguido de qualquer coisa).
 	local def_clean_pattern = string.format("void\\s\\+%s\\s*(.*{", method_name)
 	local final_def_row = vim.fn.search(def_clean_pattern, "W")
 
 	if final_def_row > 0 then
-		-- Garante que vai para a chave de abertura '{' desta função
 		vim.fn.search("{", "W", final_def_row + 1)
 
-		-- Seleciona o bloco inteiro até o fechamento '}'
 		vim.cmd("normal! %")
 		local final_end_row = vim.fn.line(".")
 
-		-- Deleta as linhas
 		vim.api.nvim_buf_set_lines(0, final_def_row - 1, final_end_row, false, {})
 		print("Inlined " .. #calls .. " occurrence(s) and removed definition.")
 	else
@@ -322,36 +307,124 @@ local function capitalize(str)
 end
 
 function R.encapsulate_field()
-	-- Takes the line where the cursor is
-	local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+	local current_row = vim.api.nvim_win_get_cursor(0)[1] - 1
 	local line = vim.api.nvim_get_current_line()
+	local view = vim.fn.winsaveview()
 
+	-- 1. ANALISAR A VARIÁVEL
 	local indent, type, name = line:match("^(%s*)([%w_:*&]+)%s+([%w_]+)%s*;")
-
 	if not type or not name then
-		print("Erro: Não foi possível identificar um campo no formato 'Tipo nome;'")
+		print("Erro: Cursor não está sobre uma declaração válida 'Tipo nome;'")
+		return
+	end
+	local cap_name = (name:gsub("^%l", string.upper))
+
+	-- 2. ENCONTRAR O INÍCIO DA CLASSE
+	local class_start_row = vim.fn.search("\\(class\\|struct\\).*{", "bnW")
+	if class_start_row == 0 then
+		print("Erro: Classe não encontrada.")
 		return
 	end
 
-	local cap_name = capitalize(name)
+	-- 3. DESCOBRIR O ESCOPO ATUAL (Onde a variável está?)
+	-- Busca para trás o modificador mais próximo (public: ou private:)
+	local modifier_row = vim.fn.search("\\(public\\|private\\):", "bnW", class_start_row)
+	local is_already_private = false
 
-	-- Make the getter and setter function
-	local lines_to_insert = {
+	if modifier_row > 0 then
+		local modifier_line = vim.api.nvim_buf_get_lines(0, modifier_row - 1, modifier_row, false)[1]
+		if modifier_line:match("private:") then
+			is_already_private = true
+		end
+	else
+		-- Se não achou modificador, classes são private por default, structs são public.
+		-- Vamos assumir 'false' (public) para forçar a criação explicita das seções,
+		-- a menos que seja class, mas para segurança, tratamos como se precisasse mover.
+		local class_line = vim.api.nvim_buf_get_lines(0, class_start_row - 1, class_start_row, false)[1]
+		if class_line:match("class") then
+			-- Em class, se não tem modificador no topo, é private.
+			is_already_private = true
+		end
+	end
+
+	-- 4. LOCALIZAR OU CRIAR SEÇÕES (PUBLIC / PRIVATE)
+	-- Vamos buscar onde elas estão. Se não existirem, inserimos no topo da classe.
+
+	-- Busca posição do 'private:'
+	vim.api.nvim_win_set_cursor(0, { class_start_row, 0 })
+	local private_section_row = vim.fn.search("private:", "W")
+
+	-- Busca posição do 'public:'
+	vim.api.nvim_win_set_cursor(0, { class_start_row, 0 })
+	local public_section_row = vim.fn.search("public:", "W")
+
+	-- Lógica de Criação de Seções Faltantes (Inserir logo após { da classe)
+	local insert_offset = 0 -- Controle de linhas adicionadas
+	local effective_class_start = class_start_row -- Base 1 do Vim
+
+	-- Se não tem public, cria
+	if public_section_row == 0 then
+		vim.api.nvim_buf_set_lines(0, effective_class_start, effective_class_start, false, { indent .. "public:" })
+		public_section_row = effective_class_start + 1
+		insert_offset = insert_offset + 1
+		-- Se o private existia, ele foi empurrado pra baixo
+		if private_section_row > 0 then
+			private_section_row = private_section_row + 1
+		end
+		-- Se a variável estava abaixo, ela também desceu
+		current_row = current_row + 1
+	end
+
+	-- Se não tem private, cria
+	if private_section_row == 0 then
+		-- Insere ANTES do public recém criado ou existente, ou no topo
+		-- Estratégia: Colocar private logo no início da classe é mais seguro para atributos
+		vim.api.nvim_buf_set_lines(0, effective_class_start, effective_class_start, false, { indent .. "private:" })
+		private_section_row = effective_class_start + 1
+		insert_offset = insert_offset + 1
+		-- O public foi empurrado pra baixo
+		public_section_row = public_section_row + 1
+		current_row = current_row + 1
+	end
+
+	-- 5. MOVIMENTAÇÃO DO CAMPO (Se necessário)
+	if is_already_private then
+		print("Atributo já é privado. Mantendo no lugar.")
+		-- Se já é privado, não deletamos a linha original.
+		-- Mas precisamos garantir que não estamos inserindo os métodos no meio do atributo
+	else
+		print("Movendo atributo para private...")
+		-- 1. Cria a linha no private (logo abaixo da tag private:)
+		local field_line = string.format("%s%s %s;", indent, type, name)
+		vim.api.nvim_buf_set_lines(0, private_section_row, private_section_row, false, { field_line })
+
+		-- 2. Ajusta índices porque inserimos linha
+		if public_section_row > private_section_row then
+			public_section_row = public_section_row + 1
+		end
+		current_row = current_row + 1 -- A linha original desceu 1
+
+		-- 3. Deleta a linha original (que era pública)
+		vim.api.nvim_buf_set_lines(0, current_row, current_row + 1, false, {})
+
+		-- Como deletamos, o que estava abaixo sobe. Se o public estava abaixo, sobe 1.
+		-- Mas geralmente o public está acima ou em outro lugar.
+	end
+
+	-- 6. INSERÇÃO DOS MÉTODOS (Sempre no Public)
+	local methods_lines = {
+		string.format("%s%s get%s() { return %s; }", indent, type, cap_name, name),
+		string.format("%svoid set%s(%s %s) { this->%s = %s; }", indent, cap_name, type, name, name, name),
 		"",
-		-- Getter: int getAge() { return age; }
-		string.format("%s%s get%s() {", indent, type, cap_name),
-		string.format("%s    return %s;", indent, name),
-		string.format("%s}", indent),
-		"",
-		-- Setter: void setAge(int age) { this->age = age; }
-		string.format("%svoid set%s(%s %s) {", indent, cap_name, type, name),
-		string.format("%s    this->%s = %s;", indent, name, name),
-		string.format("%s}", indent),
 	}
 
-	vim.api.nvim_buf_set_lines(0, row + 1, row + 1, false, lines_to_insert)
+	-- Insere logo abaixo da tag 'public:'
+	vim.api.nvim_buf_set_lines(0, public_section_row, public_section_row, false, methods_lines)
 
-	print("Getters e Setters created! Remember to move '" .. name .. "' to private section.")
+	-- Formatação final
+	vim.cmd("silent normal! gg=G")
+	-- Tenta restaurar cursor (pode não ser perfeito devido a inserções)
+	pcall(vim.fn.winrestview, view)
 end
 
 return R

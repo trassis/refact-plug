@@ -1,16 +1,18 @@
 #include <iostream>
 
 class Pessoa {
+private:
+	int amigo;
+	int ok;
 public:
-    int idade; // <--- Cursor aqui
+	int getAmigo() { return amigo; }
+	void setAmigo(int amigo) { this->amigo = amigo; }
 
-    int getIdade() {
-        return idade;
-    }
+	int getOk() { return ok; }
+	void setOk(int ok) { this->ok = ok; }
 
-    void setIdade(int idade) {
-        this->idade = idade;
-    }
+
+
 };
 
 
