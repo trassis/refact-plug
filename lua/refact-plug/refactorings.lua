@@ -175,10 +175,38 @@ function R.extract_method(opts)
 	vim.cmd(string.format("silent normal! %dG=%dG", insert_row + 1, insert_row + #method_definition))
 end
 
--- Inlines a method
+-- Extracts the name of function parameters
+local function parse_params(param_str)
+	local params = {}
+	if not param_str or param_str:match("^%s*$") then
+		return params
+	end
+
+	for part in string.gmatch(param_str, "([^,]+)") do
+		part = part:match("^%s*(.-)%s*$")
+		local name = part:match("[%w_]+$")
+		if name then
+			table.insert(params, name)
+		end
+	end
+	return params
+end
+
+-- Extracts the name of variables on function call
+local function parse_args(arg_str)
+	local args = {}
+	if not arg_str or arg_str:match("^%s*$") then
+		return args
+	end
+
+	for part in string.gmatch(arg_str, "([^,]+)") do
+		table.insert(args, part:match("^%s*(.-)%s*$"))
+	end
+	return args
+end
+
 function R.inline_method(opts)
 	local method_name = opts.fargs[1]
-
 	if not method_name then
 		print("Usage: :InlineMethod <method_name>")
 		return
@@ -186,27 +214,35 @@ function R.inline_method(opts)
 
 	local view = vim.fn.winsaveview()
 
-	-- Locates the function
+	-- Locates function and parameters
 	vim.cmd("normal! gg")
-	local def_pattern = string.format("void\\s\\+%s\\s*()\\s*{", method_name)
+	local def_pattern = string.format("void\\s\\+%s\\s*(\\zs.*\\ze)\\s*{", method_name)
 	local def_row = vim.fn.search(def_pattern, "W")
 
 	if def_row == 0 then
-		print("Error: Definition for '" .. method_name .. "' not found.")
-		return
+		local fallback_pattern = string.format("void\\s\\+%s\\s*().*{", method_name)
+		def_row = vim.fn.search(fallback_pattern, "W")
+		if def_row == 0 then
+			print("Error: Definition for '" .. method_name .. "' not found.")
+			return
+		end
 	end
 
+	local def_line_text = vim.api.nvim_buf_get_lines(0, def_row - 1, def_row, false)[1]
+	local raw_params = def_line_text:match("void%s+" .. method_name .. "%s*%((.*)%)")
+	local param_names = parse_params(raw_params)
+
+	-- Copy function body
 	vim.fn.search("{", "W", def_row + 1)
 	local start_brace_row = vim.fn.line(".")
 	vim.cmd("normal! %")
 	local end_brace_row = vim.fn.line(".")
 
-	-- Copy the internal lines
-	local body_lines = vim.api.nvim_buf_get_lines(0, start_brace_row, end_brace_row - 1, false)
+	local original_body_lines = vim.api.nvim_buf_get_lines(0, start_brace_row, end_brace_row - 1, false)
 
-	-- Find the places where there is a function call
+	-- Find function call
 	vim.cmd("normal! gg")
-	local call_pattern = string.format("\\<%s\\s*();", method_name)
+	local call_pattern = string.format("\\<%s\\s*(", method_name)
 
 	local calls = {}
 	while true do
@@ -226,32 +262,150 @@ function R.inline_method(opts)
 		return
 	end
 
-	-- Substitutes the method in the calls
+	-- Substitutes the variables
 	for i = #calls, 1, -1 do
-		local row_idx = calls[i] - 1 -- API usa base-0
+		local row_idx = calls[i] - 1
+		local call_line_text = vim.api.nvim_buf_get_lines(0, row_idx, row_idx + 1, false)[1]
 
-		vim.api.nvim_buf_set_lines(0, row_idx, row_idx + 1, false, body_lines)
+		local raw_args = call_line_text:match(method_name .. "%s*%((.*)%);")
+		local call_args = parse_args(raw_args)
 
-		local end_insert = row_idx + #body_lines
+		local new_body_lines = {}
+
+		for _, line in ipairs(original_body_lines) do
+			local modified_line = line
+
+			if #param_names == #call_args then
+				for k, param in ipairs(param_names) do
+					local arg = call_args[k]
+					modified_line = modified_line:gsub("%f[%w_]" .. param .. "%f[^%w_]", arg)
+				end
+			end
+			table.insert(new_body_lines, modified_line)
+		end
+
+		vim.api.nvim_buf_set_lines(0, row_idx, row_idx + 1, false, new_body_lines)
+		local end_insert = row_idx + #new_body_lines
 		vim.cmd(string.format("silent normal! %dG=%dG", row_idx + 1, end_insert))
 	end
-
-	-- Deletes the original method
+	-- 4. DELETAR A DEFINIÇÃO ORIGINAL
+	-- Busca de novo pois as linhas mudaram
 	vim.cmd("normal! gg")
-	local final_def_row = vim.fn.search(def_pattern, "W")
+
+	-- CORREÇÃO AQUI:
+	-- Antes estava "().*{" (parênteses vazios).
+	-- Mudamos para "\\(.*" (parêntese aberto seguido de qualquer coisa).
+	local def_clean_pattern = string.format("void\\s\\+%s\\s*(.*{", method_name)
+	local final_def_row = vim.fn.search(def_clean_pattern, "W")
 
 	if final_def_row > 0 then
+		-- Garante que vai para a chave de abertura '{' desta função
 		vim.fn.search("{", "W", final_def_row + 1)
+
+		-- Seleciona o bloco inteiro até o fechamento '}'
 		vim.cmd("normal! %")
 		local final_end_row = vim.fn.line(".")
 
+		-- Deleta as linhas
 		vim.api.nvim_buf_set_lines(0, final_def_row - 1, final_end_row, false, {})
 		print("Inlined " .. #calls .. " occurrence(s) and removed definition.")
 	else
 		print("Warning: Could not find original definition to delete (lines shifted?).")
 	end
 
+	--	-- Deletes original function
+	--	vim.cmd("normal! gg")
+	--	local def_clean_pattern = string.format("void\\s\\+%s\\s*().*{", method_name)
+	--	local final_def_row = vim.fn.search(def_clean_pattern, "W")
+	--
+	--	if final_def_row > 0 then
+	--		vim.fn.search("{", "W", final_def_row + 1)
+	--		vim.cmd("normal! %")
+	--		local final_end_row = vim.fn.line(".")
+	--		vim.api.nvim_buf_set_lines(0, final_def_row - 1, final_end_row, false, {})
+	--		print("Inlined " .. #calls .. " occurrence(s).")
+	--	end
+
 	vim.fn.winrestview(view)
 end
+
+-- Inlines a method
+-- function R.inline_method(opts)
+-- 	local method_name = opts.fargs[1]
+--
+-- 	if not method_name then
+-- 		print("Usage: :InlineMethod <method_name>")
+-- 		return
+-- 	end
+--
+-- 	local view = vim.fn.winsaveview()
+--
+-- 	-- Locates the function
+-- 	vim.cmd("normal! gg")
+-- 	local def_pattern = string.format("void\\s\\+%s\\s*()\\s*{", method_name)
+-- 	local def_row = vim.fn.search(def_pattern, "W")
+--
+-- 	if def_row == 0 then
+-- 		print("Error: Definition for '" .. method_name .. "' not found.")
+-- 		return
+-- 	end
+--
+-- 	vim.fn.search("{", "W", def_row + 1)
+-- 	local start_brace_row = vim.fn.line(".")
+-- 	vim.cmd("normal! %")
+-- 	local end_brace_row = vim.fn.line(".")
+--
+-- 	-- Copy the internal lines
+-- 	local body_lines = vim.api.nvim_buf_get_lines(0, start_brace_row, end_brace_row - 1, false)
+--
+-- 	-- Find the places where there is a function call
+-- 	vim.cmd("normal! gg")
+-- 	local call_pattern = string.format("\\<%s\\s*();", method_name)
+--
+-- 	local calls = {}
+-- 	while true do
+-- 		local call_row = vim.fn.search(call_pattern, "W")
+-- 		if call_row == 0 then
+-- 			break
+-- 		end
+--
+-- 		if call_row ~= def_row then
+-- 			table.insert(calls, call_row)
+-- 		end
+-- 	end
+--
+-- 	if #calls == 0 then
+-- 		print("No calls found for '" .. method_name .. "'.")
+-- 		vim.fn.winrestview(view)
+-- 		return
+-- 	end
+--
+-- 	-- Substitutes the method in the calls
+-- 	for i = #calls, 1, -1 do
+-- 		local row_idx = calls[i] - 1 -- API usa base-0
+--
+-- 		vim.api.nvim_buf_set_lines(0, row_idx, row_idx + 1, false, body_lines)
+--
+-- 		local end_insert = row_idx + #body_lines
+-- 		vim.cmd(string.format("silent normal! %dG=%dG", row_idx + 1, end_insert))
+-- 	end
+--
+-- 	-- Deletes the original method
+-- 	vim.cmd("normal! gg")
+-- 	local final_def_row = vim.fn.search(def_pattern, "W")
+--
+-- 	if final_def_row > 0 then
+-- 		vim.fn.search("{", "W", final_def_row + 1)
+-- 		vim.cmd("normal! %")
+-- 		local final_end_row = vim.fn.line(".")
+--
+-- 		vim.api.nvim_buf_set_lines(0, final_def_row - 1, final_end_row, false, {})
+-- 		print("Inlined " .. #calls .. " occurrence(s) and removed definition.")
+-- 	else
+-- 		print("Warning: Could not find original definition to delete (lines shifted?).")
+-- 	end
+--
+-- 	vim.fn.winrestview(view)
+-- end
 
 return R
