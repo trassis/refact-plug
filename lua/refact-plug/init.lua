@@ -51,6 +51,8 @@ function M.setup()
 		desc = "Inline ",
 	})
 
+	vim.api.nvim_create_user_command("EncapsulateField", Refactorings.encapsulate_field, {})
+
 	-- Detects code smells whenever the buffer is modified or saved.
 	vim.api.nvim_create_autocmd({ "TextChanged", "BufWritePost" }, {
 		callback = M.detect_smells,

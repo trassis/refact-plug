@@ -1,17 +1,24 @@
 #include <iostream>
 
+class Pessoa {
+public:
+    int idade; // <--- Cursor aqui
+
+    int getIdade() {
+        return idade;
+    }
+
+    void setIdade(int idade) {
+        this->idade = idade;
+    }
+};
+
+
 void add_twice(int &v, int w){
 	v += w;
 }
 
-void vapo() {
-	int a = 0;
-	std::string s = "oi";
-	for(int i=0; i<5; i++){
-		a += i;
-		s += "tchau";
-	}
-}
+
 
 int main(){
 	int nomecomx = 0;
@@ -19,7 +26,13 @@ int main(){
 	y += 1;
 	int z = y + 2;
 
-	vapo();
+	int a = 0;
+	std::string s = "oi";
+	for(int i=0; i<5; i++){
+		z += i;
+		s += "tchau";
+	}
+
 
 	std::cout << a << std::endl;
 

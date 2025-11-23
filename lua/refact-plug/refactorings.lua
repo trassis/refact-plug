@@ -313,99 +313,45 @@ function R.inline_method(opts)
 		print("Warning: Could not find original definition to delete (lines shifted?).")
 	end
 
-	--	-- Deletes original function
-	--	vim.cmd("normal! gg")
-	--	local def_clean_pattern = string.format("void\\s\\+%s\\s*().*{", method_name)
-	--	local final_def_row = vim.fn.search(def_clean_pattern, "W")
-	--
-	--	if final_def_row > 0 then
-	--		vim.fn.search("{", "W", final_def_row + 1)
-	--		vim.cmd("normal! %")
-	--		local final_end_row = vim.fn.line(".")
-	--		vim.api.nvim_buf_set_lines(0, final_def_row - 1, final_end_row, false, {})
-	--		print("Inlined " .. #calls .. " occurrence(s).")
-	--	end
-
 	vim.fn.winrestview(view)
 end
 
--- Inlines a method
--- function R.inline_method(opts)
--- 	local method_name = opts.fargs[1]
---
--- 	if not method_name then
--- 		print("Usage: :InlineMethod <method_name>")
--- 		return
--- 	end
---
--- 	local view = vim.fn.winsaveview()
---
--- 	-- Locates the function
--- 	vim.cmd("normal! gg")
--- 	local def_pattern = string.format("void\\s\\+%s\\s*()\\s*{", method_name)
--- 	local def_row = vim.fn.search(def_pattern, "W")
---
--- 	if def_row == 0 then
--- 		print("Error: Definition for '" .. method_name .. "' not found.")
--- 		return
--- 	end
---
--- 	vim.fn.search("{", "W", def_row + 1)
--- 	local start_brace_row = vim.fn.line(".")
--- 	vim.cmd("normal! %")
--- 	local end_brace_row = vim.fn.line(".")
---
--- 	-- Copy the internal lines
--- 	local body_lines = vim.api.nvim_buf_get_lines(0, start_brace_row, end_brace_row - 1, false)
---
--- 	-- Find the places where there is a function call
--- 	vim.cmd("normal! gg")
--- 	local call_pattern = string.format("\\<%s\\s*();", method_name)
---
--- 	local calls = {}
--- 	while true do
--- 		local call_row = vim.fn.search(call_pattern, "W")
--- 		if call_row == 0 then
--- 			break
--- 		end
---
--- 		if call_row ~= def_row then
--- 			table.insert(calls, call_row)
--- 		end
--- 	end
---
--- 	if #calls == 0 then
--- 		print("No calls found for '" .. method_name .. "'.")
--- 		vim.fn.winrestview(view)
--- 		return
--- 	end
---
--- 	-- Substitutes the method in the calls
--- 	for i = #calls, 1, -1 do
--- 		local row_idx = calls[i] - 1 -- API usa base-0
---
--- 		vim.api.nvim_buf_set_lines(0, row_idx, row_idx + 1, false, body_lines)
---
--- 		local end_insert = row_idx + #body_lines
--- 		vim.cmd(string.format("silent normal! %dG=%dG", row_idx + 1, end_insert))
--- 	end
---
--- 	-- Deletes the original method
--- 	vim.cmd("normal! gg")
--- 	local final_def_row = vim.fn.search(def_pattern, "W")
---
--- 	if final_def_row > 0 then
--- 		vim.fn.search("{", "W", final_def_row + 1)
--- 		vim.cmd("normal! %")
--- 		local final_end_row = vim.fn.line(".")
---
--- 		vim.api.nvim_buf_set_lines(0, final_def_row - 1, final_end_row, false, {})
--- 		print("Inlined " .. #calls .. " occurrence(s) and removed definition.")
--- 	else
--- 		print("Warning: Could not find original definition to delete (lines shifted?).")
--- 	end
---
--- 	vim.fn.winrestview(view)
--- end
+-- Helper to captilalize the first letter (ant -> Ant)
+local function capitalize(str)
+	return (str:gsub("^%l", string.upper))
+end
+
+function R.encapsulate_field()
+	-- Takes the line where the cursor is
+	local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+	local line = vim.api.nvim_get_current_line()
+
+	local indent, type, name = line:match("^(%s*)([%w_:*&]+)%s+([%w_]+)%s*;")
+
+	if not type or not name then
+		print("Erro: Não foi possível identificar um campo no formato 'Tipo nome;'")
+		return
+	end
+
+	local cap_name = capitalize(name)
+
+	-- Make the getter and setter function
+	local lines_to_insert = {
+		"",
+		-- Getter: int getAge() { return age; }
+		string.format("%s%s get%s() {", indent, type, cap_name),
+		string.format("%s    return %s;", indent, name),
+		string.format("%s}", indent),
+		"",
+		-- Setter: void setAge(int age) { this->age = age; }
+		string.format("%svoid set%s(%s %s) {", indent, cap_name, type, name),
+		string.format("%s    this->%s = %s;", indent, name, name),
+		string.format("%s}", indent),
+	}
+
+	vim.api.nvim_buf_set_lines(0, row + 1, row + 1, false, lines_to_insert)
+
+	print("Getters e Setters created! Remember to move '" .. name .. "' to private section.")
+end
 
 return R
