@@ -52,7 +52,7 @@ In the specification, we said that we would implement 5 refactorings. The easier
 - [x] Method extraction
 - [x] Method inlining
 - [x] Renaming of variables
-- [ ] Encapsulate Atribute (from public to private get and set)
+- [x] Encapsulate Atribute (from public to private get and set)
 - [ ] ??? We need another one ???
 
 Another option is to also implement indentification and warning of code smells
@@ -65,7 +65,6 @@ Another option is to also implement indentification and warning of code smells
 
 Notes
 
-- Inline method to be made better with dynamic parameters.
 - Delete hello function 
 - What are the dependencies of the plugin? cpp treesitter is one...
 
