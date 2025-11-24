@@ -1,6 +1,6 @@
 # Refact-Plug
 
-refact-plug is a Neovim plugin built in Lua that uses Tree-sitter to execute precise, automated code refactorings. It provides essential commands for structural code manipulation, enhancing maintenance efficiency.
+refact-plug is a Neovim plugin built in Lua that uses Tree-sitter to execute precise code refactorings. It provides essential commands for structural code manipulation, enhancing maintenance efficiency. As an extra functionality, it also warns the user about potential code smells.
 
 # Instalation
 
