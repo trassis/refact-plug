@@ -135,7 +135,7 @@ The entire line (or the segment exceeding the limit) is underlined to indicate t
 ```cpp
 // This line will be underlined if it exceeds the column limit:
 int result = extremely_long_function_name_that_does_not_fit_in_screen(param1, param2, param3, ...);
-
+```
 ### Duplicate code
 
 Detects identical blocks of code appearing in multiple locations within the file or project, violating the DRY (Don't Repeat Yourself) principle.
