@@ -119,3 +119,40 @@ Example (With cursor positioned on 'int age;', generates getAge/setAge and priva
 ```
     :EncapsulateField
 ```
+
+# Code Smells (Passive Warnings)
+
+The following features do not require a command to run. They automatically analyze the code in the current buffer and display warnings (underlined text) to indicate potential code smells.
+
+### Long Line
+
+Highlights lines of code that exceed the configured maximum character limit (80 characters).
+
+**Behavior:**
+The entire line (or the segment exceeding the limit) is underlined to indicate that it affects readability and requires horizontal scrolling.
+
+**Example:**
+```cpp
+// This line will be underlined if it exceeds the column limit:
+int result = extremely_long_function_name_that_does_not_fit_in_screen(param1, param2, param3, ...);
+
+### Duplicate code
+
+Detects identical blocks of code appearing in multiple locations within the file or project, violating the DRY (Don't Repeat Yourself) principle.
+
+**Behavior:**
+The duplicated lines or blocks are underlined. Hovering over the warning usually indicates that this logic exists elsewhere.
+
+### Large classes
+
+Identifies classes or structs that have become too complex, containing an excessive number of methods, attributes, or lines of code. This often indicates a "God Object" anti-pattern.
+
+**Behavior:**
+The entire line (or the segment exceeding the limit) is underlined to indicate that it affects readability and requires horizontal scrolling.
+
+### Methods with many parameters
+
+Flags function or method definitions that require a large number of arguments. This suggests that the method might be doing too much or that the parameters should be encapsulated into a specific object or struct.
+
+**Behavior:**
+The function signature (specifically the parameter list) is underlined if the count exceeds a predefined threshold (e.g., more than 4 or 5 parameters).
