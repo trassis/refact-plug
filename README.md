@@ -156,4 +156,4 @@ The entire line (or the segment exceeding the limit) is underlined to indicate t
 Flags function or method definitions that require a large number of arguments. This suggests that the method might be doing too much or that the parameters should be encapsulated into a specific object or struct.
 
 **Behavior:**
-The function signature (specifically the parameter list) is underlined if the count exceeds a predefined threshold (e.g., more than 4 or 5 parameters).
+The function signature (specifically the parameter list) is underlined if the count exceeds a predefined threshold (5 paramaters).
