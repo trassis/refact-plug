@@ -1,53 +1,21 @@
-# Setup
+# Refact-Plug
 
-To run the plugin (inside ./refact-plug, which is not ./refact-plug/lua/refact-plug), do
+refact-plug is a Neovim plugin built in Lua that uses Tree-sitter to execute precise, automated code refactorings. It provides essential commands for structural code manipulation, enhancing maintenance efficiency.
 
-```nvim -c "set rtp+=."```
+# Instalation
 
-To run the plugin function ```hello()```, do
+Install with your favorite plugin manager, such as lazy.nvim:
+```
+{
+    "trassis/refact-plug",
+    config = function()
+        require("refact-plug").setup()
+    end,
+}
+```
 
-```:lua require('refact-plug').hello()```
+# Documentation
 
-Alternatively, you can do all in one command:
-
-```nvim -c "set rtp+=. | lua require('refact-plug').hello()"```
-
-# Testing
-
-You can open a file to test it on the go. To test RenameVar refactoring, do the following:
-- Run `nvim -c "set rtp+=. | lua require('refact-plug').setup()" test.cpp`
-- Now nvim should be opened (with no error warnings), with a cpp file
-- Run the nvim command `:RenameVar x y`, and see the renaming happening.
-
-# How to implement a new refactoring
-
-Write relevant code on ```./lua/refact-plug/init.lua```. Follow the example of the Rename Variable refactoring. To create a new refactoring, two steps are needed.
-
-1) Create a lua function implementing it (ex: M.rename_variable)
-2) Create a vim command so that the user can call the function (in M.setup)
-
-I have created a new file for refactorings, `./lua/refact-plug/refactorings.lua`. Implement refactorings there, and after create a new user command in `init.lua.setup()`.
-
-The main sources of help will be
-- nvim help docs. For example: `:help treesitter.get_parser()`
-- there are some ytb videos on how to write a lua plugin
-- chat gpt?
-
-# Troubleshooting:
-
-If the plugin does not seem to work... 
-
-After entering vim with set rtp, check if the `.` folder appears on 
-
-```:echo &rtp```
-
-If it dosent, try changing the command from `.` to `./`:
-
-```nvim -c "set rtp+=/.```
-
----
-
-# DOCS
 ## Refactoring 
 
 ### RenameVar
