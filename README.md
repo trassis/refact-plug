@@ -45,29 +45,6 @@ If it dosent, try changing the command from `.` to `./`:
 
 ```nvim -c "set rtp+=/.```
 
-# TODO list
-
-In the specification, we said that we would implement 5 refactorings. The easier ones seems to be:
-
-- [x] Method extraction
-- [x] Method inlining
-- [x] Renaming of variables
-- [x] Encapsulate Atribute (from public to private get and set)
-- [ ] ??? We need another one ???
-
-Another option is to also implement indentification and warning of code smells
-
-- [x] large lines
-- [ ] cod duplicado
-- [ ] metodos longos
-- [ ] classes grandes
-- [ ] metodos com mts parametros
-
-Notes
-
-- Delete hello function 
-- What are the dependencies of the plugin? cpp treesitter is one...
-
 ---
 
 # DOCS
