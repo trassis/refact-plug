@@ -5,32 +5,9 @@ function M.hello()
 	print("Hi from the plugin!")
 end
 
-local ns = vim.api.nvim_create_namespace("RefactorPlugin")
-
-function M.detect_smells()
-	local diagnostics = {}
-
-	-- Long lines code smell
-	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-	for i, line in ipairs(lines) do
-		if #line > 80 then
-			table.insert(diagnostics, {
-				lnum = i - 1,
-				col = 80,
-				end_lnum = i - 1,
-				end_col = #line,
-				severity = vim.diagnostic.severity.WARN,
-				message = "Code Smell - Line exceeds 80 characters",
-				source = "RefactorPlug",
-			})
-		end
-	end
-
-	-- Publish the diagnostics to the buffer
-	vim.diagnostic.set(ns, 0, diagnostics)
-end
-
+local CodeSmells = require("refact-plug.codeSmells")
 local Refactorings = require("refact-plug.refactorings")
+
 
 function M.setup()
 	-- TODO: If lang is not cpp, do not continue...
@@ -55,9 +32,12 @@ function M.setup()
 
 	-- Detects code smells whenever the buffer is modified or saved.
 	vim.api.nvim_create_autocmd({ "TextChanged", "BufWritePost" }, {
-		callback = M.detect_smells,
+		callback = function()
+            CodeSmells.detect_smells()
+        end,
 	})
-	M.detect_smells()
+
+	CodeSmells.detect_smells()
 end
 
 return M
