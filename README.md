@@ -48,6 +48,7 @@ If it dosent, try changing the command from `.` to `./`:
 ---
 
 # DOCS
+## Refactoring 
 
 ### RenameVar
 
@@ -120,7 +121,7 @@ Example (With cursor positioned on 'int age;', generates getAge/setAge and priva
     :EncapsulateField
 ```
 
-# Code Smells (Passive Warnings)
+## Code Smells (Passive Warnings)
 
 The following features do not require a command to run. They automatically analyze the code in the current buffer and display warnings (underlined text) to indicate potential code smells.
 
